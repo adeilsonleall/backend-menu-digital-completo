@@ -1,13 +1,20 @@
 import express from 'express'; // Importa o framework Express para construção de aplicações web.
-import { retornaPratos } from '../servicos/manipulaPratos.js';
+import { retornaCategoriaPratos } from '../servicos/manipulaPratos.js';
 
 const pratosRouters = express.Router(); // Cria uma instância da aplicação Express.
 
 // Rota para listar pratos
 pratosRouters.get('/', async (req, res) => {
-    const listaPratos =  await retornaPratos();  
+    const categoria = req.query.categoria;
 
-    res.json({ pratos: listaPratos }); // Responde com o código de status apropriado e a lista de leads.
+    if(categoria === undefined){
+        res.status(400).json({ Erro: 'Nenhum parametro recebido' }); // 
+    }else {
+        const listaPratos =  await retornaCategoriaPratos(categoria); 
+         res.status(200).json({ Pratos: listaPratos }); // 
+    }
+
+    
 });
 
 export default pratosRouters;

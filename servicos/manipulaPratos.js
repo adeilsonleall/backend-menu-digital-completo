@@ -1,13 +1,14 @@
 import pool from "./conexao.js"; // Importa o pool de conexões do arquivo conexao.js.
 
-export async function retornaPratos() {
+// Função retorna categoria de pratos
+export async function retornaCategoriaPratos(categoria) {
     let conexao;
 
     try {
         conexao = await pool.getConnection(); // Obtém uma conexão do pool.
 
         // Executa a query de seleção no banco de dados.
-        const [pratos] = await conexao.query("SELECT categoria, nome, preco FROM cardapio");
+        const [pratos] = await conexao.query('SELECT categoria, nome, preco FROM cardapio WHERE categoria ="'+categoria+'"');
 
         return pratos; // Retorna a lista de pratos.
 
