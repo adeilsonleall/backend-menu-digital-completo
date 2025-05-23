@@ -8,7 +8,7 @@ pratosRouters.get('/', async (req, res) => {
     const categoria = req.query.categoria; // Recebe valor a ser requisitado no banco de dados.
 
     if(categoria === undefined){ // Valida se a chave foi recebida corretamente.
-        res.status(400).json({ Erro: 'Nenhum parametro recebido' }); // 
+        res.status(400).json({ Erro: 'Nenhum parametro recebido!' }); // 
     }else {
         const listaPratos =  await retornaCategoriaPratos(categoria); 
 

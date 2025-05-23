@@ -16,7 +16,7 @@ export async function retornaCategoriaPratos(categoria) {
             return {pratos, status} // Retorna dados encontrados e status.
         }else{
             status=false; // Seta status para false.
-            pratos = {erro: 'Nenhum registro encontrado'}; // Informa que nenhum dado foi encontrado.
+            pratos = {erro: 'Nenhum registro encontrado!'}; // Informa que nenhum dado foi encontrado.
             return {pratos, status} // Retorna mensagem de alerta e status.
         }
 
