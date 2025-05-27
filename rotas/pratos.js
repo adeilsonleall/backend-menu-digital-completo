@@ -1,5 +1,5 @@
 import express from 'express';
-import { retornaCategoriaPratos, retornaNomePratos, retornaDescricaoPratos, cadastraPrato } from '../servicos/manipulaPratos.js';
+import { retornaCategoriaPratos, retornaNomePratos, retornaDescricaoPratos, cadastraPrato, deletaPrato, editaPrato } from '../servicos/manipulaPratos.js';
 
 const pratosRouters = express.Router(); // Cria um roteador para as rotas relacionadas aos pratos.
 
@@ -56,6 +56,53 @@ pratosRouters.get('/', async (req, res) => {
     } catch (erro) {
         console.error("Erro ao buscar pratos:", erro);
         res.status(500).json({ erro: "Erro interno ao buscar pratos." }); // Tratamento de erro adequado.
+    }
+});
+
+
+/**
+ * Rota para editar pratos.
+*/
+pratosRouters.put('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { novaCategoria, novoNome, novaDescricao, novoPreco, novaImagem} = req.body;
+
+        console.log(id)
+        console.log(novaCategoria)
+        
+        const resposta = await editaPrato(novaCategoria, novoNome, novaDescricao, novoPreco, novaImagem, id);
+        
+        if (!resposta.status) {
+            return res.status(404).json({ erro: 'Nenhum prato encontrado para atualizar!' });
+        }
+        
+        res.status(200).json({ mensagem: "Prato atualizado com sucesso!" });
+        
+    } catch (erro) {
+        console.error("Erro ao editar prato:", erro);
+        res.status(500).json({ erro: "Erro interno ao editar prato." });
+    }
+});
+
+/**
+ * Rota para deletar pratos.
+ */
+pratosRouters.delete('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const resposta = await deletaPrato(id);
+
+        if (!resposta.status) {
+            return res.status(404).json({ erro: 'Nenhum prato encontrado para deletar!' });
+        }
+
+        res.status(200).json({ mensagem: "Prato deletado com sucesso!" });
+
+    } catch (erro) {
+        console.error("Erro ao deletar prato:", erro);
+        res.status(500).json({ erro: "Erro interno ao deletar prato." });
     }
 });
 

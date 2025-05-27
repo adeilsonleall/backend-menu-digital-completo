@@ -1,6 +1,38 @@
 import pool from "./conexao.js"; // Importa o pool de conexões do banco.
 
 /**
+ * Função assíncrona para cadastrar um prato no banco de dados.
+ */
+export async function cadastraPrato(categoria, nome, descricao = '', preco = 0, imagem = '') {
+    let conexao;
+
+    try {
+        conexao = await pool.getConnection();
+
+        const query = 'INSERT INTO cardapio (categoria, nome, descricao, preco, imagem) VALUES (?, ?, ?, ?, ?)';
+        const valores = [categoria, nome, descricao, preco, imagem];
+
+        // Executa a query e verifica se foi inserido corretamente.
+        const [resultado] = await conexao.query(query, valores);
+
+        if (resultado.affectedRows > 0) {
+            console.log('Prato cadastrado com sucesso!');
+            return { status: true, mensagem: "Prato cadastrado com sucesso!" };
+        } else {
+            console.error('Falha ao cadastrar prato.');
+            throw new Error('Não foi possível cadastrar o prato.');
+        }
+
+    } catch (erro) {
+        console.error("Erro ao cadastrar prato:", erro.sqlMessage || erro.message);
+        return { status: false, erro: erro.sqlMessage || "Erro desconhecido ao cadastrar prato." };
+
+    } finally {
+        if (conexao) conexao.release();
+    }
+}
+
+/**
  * Função assíncrona que retorna pratos filtrados pela categoria.
  */
 export async function retornaCategoriaPratos(categoria) {
@@ -11,7 +43,7 @@ export async function retornaCategoriaPratos(categoria) {
 
         // Executa a query de seleção, garantindo segurança contra SQL Injection.
         const [pratos] = await conexao.query(
-            'SELECT categoria, nome, descricao, preco FROM cardapio WHERE categoria = ?',
+            'SELECT id, categoria, nome, descricao, preco, imagem FROM cardapio WHERE categoria = ?',
             [categoria]
         );
 
@@ -41,7 +73,7 @@ export async function retornaNomePratos(nome) {
 
         // Executa a busca usando LIKE para encontrar nomes semelhantes.
         const [pratos] = await conexao.query(
-            'SELECT categoria, nome, preco FROM cardapio WHERE nome LIKE ?',
+            'SELECT id, categoria, nome, descricao, preco, imagem FROM cardapio WHERE nome LIKE ?',
             [`%${nome}%`]
         );
 
@@ -70,7 +102,7 @@ export async function retornaDescricaoPratos(descricao) {
 
         // Executa a busca usando LIKE para encontrar descrições semelhantes.
         const [pratos] = await conexao.query(
-            'SELECT categoria, nome, preco FROM cardapio WHERE descricao LIKE ?',
+            'SELECT id, categoria, nome, descricao, preco, imagem FROM cardapio WHERE descricao LIKE ?',
             [`%${descricao}%`]
         );
 
@@ -89,31 +121,59 @@ export async function retornaDescricaoPratos(descricao) {
 }
 
 /**
- * Função assíncrona para cadastrar um prato no banco de dados.
+ * Função assíncrona para deletar um prato no banco de dados.
  */
-export async function cadastraPrato(categoria, nome, descricao = '', preco = 0, imagem = '') {
+export async function deletaPrato(id) {
     let conexao;
 
     try {
         conexao = await pool.getConnection();
 
-        const query = 'INSERT INTO cardapio (categoria, nome, descricao, preco, imagem) VALUES (?, ?, ?, ?, ?)';
-        const valores = [categoria, nome, descricao, preco, imagem];
-
-        // Executa a query e verifica se foi inserido corretamente.
-        const [resultado] = await conexao.query(query, valores);
+        const query = 'DELETE FROM cardapio WHERE id = ?';
+        const [resultado] = await conexao.query(query, [id]);
 
         if (resultado.affectedRows > 0) {
-            console.log('Prato cadastrado com sucesso!');
-            return { status: true, mensagem: "Prato cadastrado com sucesso!" };
+            console.log('Prato deletado com sucesso!');
+            return { status: true, mensagem: "Prato deletado com sucesso!" };
         } else {
-            console.error('Falha ao cadastrar prato.');
-            throw new Error('Não foi possível cadastrar o prato.');
+            console.error('Nenhum prato encontrado para deletar.');
+            return { status: false, erro: "Nenhum prato encontrado!" };
         }
 
     } catch (erro) {
-        console.error("Erro ao cadastrar prato:", erro.sqlMessage || erro.message);
-        return { status: false, erro: erro.sqlMessage || "Erro desconhecido ao cadastrar prato." };
+        console.error("Erro ao deletar prato:", erro.sqlMessage || erro.message);
+        return { status: false, erro: erro.sqlMessage || "Erro desconhecido ao deletar prato." };
+
+    } finally {
+        if (conexao) conexao.release();
+    }
+}
+
+/**
+ * Função assíncrona para editar um prato no banco de dados.
+ */
+export async function editaPrato(novaCategoria, novoNome, novaDescricao, novoPreco, novaImagem, id) {
+    let conexao;
+
+    try {
+        conexao = await pool.getConnection();
+
+        const query = 'UPDATE cardapio SET categoria = ?, nome = ?, descricao = ?, preco = ?, imagem = ? WHERE id = ?';
+        const valores = [novaCategoria, novoNome, novaDescricao, novoPreco, novaImagem, id];
+
+        const [resultado] = await conexao.query(query, valores);
+
+        if (resultado.affectedRows > 0) {
+            console.log('Prato atualizado com sucesso!');
+            return { status: true, mensagem: "Prato atualizado com sucesso!" };
+        } else {
+            console.error('Nenhum prato encontrado para atualizar.');
+            return { status: false, erro: "Nenhum prato encontrado!" };
+        }
+
+    } catch (erro) {
+        console.error("Erro ao editar prato:", erro.sqlMessage || erro.message);
+        return { status: false, erro: erro.sqlMessage || "Erro desconhecido ao editar prato." };
 
     } finally {
         if (conexao) conexao.release();
