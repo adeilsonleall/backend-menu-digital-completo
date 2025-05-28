@@ -1,5 +1,5 @@
 import express from 'express';
-import { retornaCategoriaPratos, retornaNomePratos, retornaDescricaoPratos, cadastraPrato, deletaPrato, editaPrato } from '../servicos/manipulaPratos.js';
+import { retornaPratos ,retornaCategoriaPratos, retornaNomePratos, retornaDescricaoPratos, cadastraPrato, deletaPrato, editaPrato } from '../servicos/manipulaPratos.js';
 
 const pratosRouters = express.Router(); // Cria um roteador para as rotas relacionadas aos pratos.
 
@@ -35,17 +35,19 @@ pratosRouters.get('/', async (req, res) => {
         // Desestrutura os parâmetros da requisição.
         const { categoria, nome, descricao } = req.query;
 
-        // Se nenhuma chave de busca for fornecida, retorna erro.
-        if (!categoria && !nome && !descricao) {
-            return res.status(400).json({ erro: 'É necessário informar pelo menos um parâmetro de busca!' });
-        }
+        // // Se nenhuma chave de busca for fornecida, retorna erro.
+        // if (!categoria && !nome && !descricao) {
+        //     return res.status(400).json({ erro: 'É necessário informar pelo menos um parâmetro de busca!' });
+        // }
 
         // Define qual função de busca utilizar com base nos parâmetros fornecidos.
         const buscaPratos = categoria 
             ? retornaCategoriaPratos(categoria) 
             : nome 
             ? retornaNomePratos(nome) 
-            : retornaDescricaoPratos(descricao);
+            : descricao
+            ? retornaDescricaoPratos(descricao)
+            : retornaPratos();
 
         // Aguarda a resposta da busca.
         const listaPratos = await buscaPratos;
