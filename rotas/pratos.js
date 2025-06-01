@@ -1,30 +1,46 @@
 import express from 'express';
+import multer from 'multer';
+import path from 'path';
 import { retornaPratos ,retornaCategoriaPratos, retornaNomePratos, retornaDescricaoPratos, cadastraPrato, deletaPrato, editaPrato } from '../servicos/manipulaPratos.js';
 
 const pratosRouters = express.Router(); // Cria um roteador para as rotas relacionadas aos pratos.
 
+// Configuração do Multer
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads-imagens/');
+  },
+  filename: function (req, file, cb) {
+    const ext = path.extname(file.originalname);
+    const nomeArquivo = `${file.fieldname}-${Date.now()}${ext}`;
+    cb(null, nomeArquivo);
+  }
+});
+
+const upload = multer({ storage });
+
 /**
  * Rota para cadastrar um prato no banco de dados.
  */
-pratosRouters.post('/', async (req, res) => {
-    try {
-        // Desestrutura o corpo da requisição e define valores padrão para evitar problemas.
-        const { categoria, nome, descricao = '', preco = 0, imagem = '' } = req.body;
+pratosRouters.post('/', upload.single('imagem'), async (req, res) => {
+  try {
+    // Desestrutura campos do corpo, exceto a imagem que virá pelo multer
+    const { categoria, nome, descricao = '', preco = 0 } = req.body;
+    // Se o arquivo foi enviado, pega o nome do arquivo, senão define como string vazia
+    const imagem = req.file ? req.file.filename : '';
 
-        // Chama a função que insere os dados no banco.
-        const resposta = await cadastraPrato(categoria, nome, descricao, preco, imagem);
+    // Chama a função que insere os dados no banco, passando o nome do arquivo da imagem
+    const resposta = await cadastraPrato(categoria, nome, descricao, preco, imagem);
 
-        if(!resposta.status) {
-            res.status(400).json({erro: 'Não foi possível cadastrar o prato.'})
-        }else{
-            // Retorna um status 201 (Created) indicando sucesso.
-        res.status(201).json({ mensagem: "Prato cadastrado com sucesso!" });
-        }
-
-    } catch (erro) {
-        console.error("Erro ao cadastrar prato:", erro);
-        res.status(500).json({ erro: "Erro interno ao cadastrar prato." }); // Retorno mais informativo em caso de falha.
+    if (!resposta.status) {
+      return res.status(400).json({ erro: 'Não foi possível cadastrar o prato.' });
     }
+    res.status(201).json({ mensagem: "Prato cadastrado com sucesso!" });
+    
+  } catch (erro) {
+    console.error("Erro ao cadastrar prato:", erro);
+    res.status(500).json({ erro: "Erro interno ao cadastrar prato." });
+  }
 });
 
 /**
