@@ -1,10 +1,17 @@
-import express from 'express';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
+import express from 'express'; // Importa o framework express para trabalhar com o servidor node js.
+import multer from 'multer'; // Importa módulo Multer para lidar com formulários  multipart/form-data.
+import path from 'path'; // Importa módulo Path para trabalhar com caminhos de arquivos e diretórios.
+import fs from 'fs'; // Importa módulo Fs (File System) para interagir com o sistema de arquivos.
 
-// Importa funções de manipulação de pratos do serviço correspondente.
-import { retornaPratos ,retornaCategoriaPratos, retornaNomePratos, retornaDescricaoPratos, cadastraPrato, deletaPrato, editaPrato } from '../servicos/manipulaPratos.js';
+import {  // Importa funções de manipulação de pratos do serviço correspondente.
+  retornaPratos,
+  retornaCategoriaPratos, 
+  retornaNomePratos, 
+  retornaDescricaoPratos, 
+  cadastraPrato, 
+  deletaPrato, 
+  editaPrato 
+} from '../servicos/manipulaPratos.js';
 
 // Cria um roteador para as rotas relacionadas aos pratos.
 const pratosRouters = express.Router();
@@ -16,7 +23,8 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     const ext = path.extname(file.originalname); // Obtém a extensão do arquivo.
-    const nomeArquivo = `${file.fieldname}-${Date.now()}${ext}`; // Gera um nome único para o arquivo.
+    // Gera um nome único para o arquivo.
+    const nomeArquivo = `${file.fieldname}-${Date.now()}${ext}`;
     cb(null, nomeArquivo);
   }
 });
@@ -51,29 +59,29 @@ pratosRouters.post('/', upload.single('imagem'), async (req, res) => {
  * Rota para listar pratos, permitindo filtros opcionais.
  */
 pratosRouters.get('/', async (req, res) => {
-    try {
-        // Obtém os parâmetros de busca da requisição.
-        const { categoria, nome, descricao } = req.query;
+  try {
+    // Obtém os parâmetros de busca da requisição.
+    const { categoria, nome, descricao } = req.query;
 
-        // Define qual função de busca utilizar com base nos parâmetros informados.
-        const buscaPratos = categoria 
-            ? retornaCategoriaPratos(categoria) 
-            : nome 
-            ? retornaNomePratos(nome) 
-            : descricao
-            ? retornaDescricaoPratos(descricao)
-            : retornaPratos();
+    // Define qual função de busca utilizar com base nos parâmetros informados.
+    const buscaPratos = categoria 
+      ? retornaCategoriaPratos(categoria) 
+      : nome 
+      ? retornaNomePratos(nome) 
+      : descricao
+      ? retornaDescricaoPratos(descricao)
+      : retornaPratos();
 
-        // Obtém a lista de pratos com base na busca.
-        const listaPratos = await buscaPratos;
+    // Obtém a lista de pratos com base na busca.
+    const listaPratos = await buscaPratos;
 
-        // Retorna os dados encontrados com status apropriado.
-        res.status(listaPratos.status ? 200 : 404).json(listaPratos.pratos);
+    // Retorna os dados encontrados com status apropriado.
+    res.status(listaPratos.status ? 200 : 404).json(listaPratos.pratos);
 
-    } catch (erro) {
-        console.error("Erro ao buscar pratos:", erro);
-        res.status(500).json({ erro: "Erro interno ao buscar pratos." });
-    }
+  } catch (erro) {
+    console.error("Erro ao buscar pratos:", erro);
+    res.status(500).json({ erro: "Erro interno ao buscar pratos." });
+  }
 });
 
 // Rota para fornecer imagens salvas no servidor.
@@ -90,45 +98,74 @@ pratosRouters.get('/:nomeImagem', (req, res) => {
 
 /**
  * Rota para editar um prato existente.
+ * A rota agora permite atualização também da imagem, caso um novo arquivo for enviado.
  */
-pratosRouters.put('/:id', async (req, res) => {
-    try {
-        const { id } = req.params; // Obtém o ID do prato a ser editado.
-        const { novaCategoria, novoNome, novaDescricao, novoPreco, novaImagem } = req.body; // Obtém os novos dados.
+pratosRouters.put('/:id', upload.single('imagem'), async (req, res) => {
+  try {
+    const { id } = req.params; // Obtém o ID do prato a ser editado.
+    const { novaCategoria, novoNome, novaDescricao, novoPreco } = req.body;
+    
+    // Se um novo arquivo de imagem for enviado, use-o; senão, utilize o valor enviado (se houver).
+    let novaImagem = req.file ? req.file.filename : req.body.novaImagem;
 
-        const resposta = await editaPrato(novaCategoria, novoNome, novaDescricao, novoPreco, novaImagem, id);
-
-        if (!resposta.status) {
-            return res.status(404).json({ erro: 'Nenhum prato encontrado para atualizar!' });
+    // Se um novo arquivo foi enviado, buscamos o prato antigo para deletar a imagem anterior.
+    if (req.file) {
+      const pratosExistentes = await retornaPratos();
+      const pratoAntigo = pratosExistentes.pratos.find(prato => prato.id == id);
+      if (pratoAntigo && pratoAntigo.imagem) {
+        const caminhoAntigo = path.join('uploads-imagens', pratoAntigo.imagem);
+        if (fs.existsSync(caminhoAntigo)) {
+          fs.unlinkSync(caminhoAntigo);
         }
-
-        res.status(200).json({ mensagem: "Prato atualizado com sucesso!" });
-
-    } catch (erro) {
-        console.error("Erro ao editar prato:", erro);
-        res.status(500).json({ erro: "Erro interno ao editar prato." });
+      }
     }
+
+    const resposta = await editaPrato(novaCategoria, novoNome, novaDescricao, novoPreco, novaImagem, id);
+
+    if (!resposta.status) {
+      return res.status(404).json({ erro: 'Nenhum prato encontrado para atualizar!' });
+    }
+
+    res.status(200).json({ mensagem: "Prato atualizado com sucesso!" });
+
+  } catch (erro) {
+    console.error("Erro ao editar prato:", erro);
+    res.status(500).json({ erro: "Erro interno ao editar prato." });
+  }
 });
 
 /**
  * Rota para deletar um prato do banco de dados.
+ * Agora, além de excluir o registro, a imagem associada (se existir) também será removida do servidor.
  */
 pratosRouters.delete('/:id', async (req, res) => {
-    try {
-        const { id } = req.params; // Obtém o ID do prato a ser deletado.
+  try {
+    const { id } = req.params; // Obtém o ID do prato a ser deletado.
 
-        const resposta = await deletaPrato(id);
+    // Busca o prato para obter informações como o nome da imagem.
+    const pratosExistentes = await retornaPratos();
+    const prato = pratosExistentes.pratos.find(prato => prato.id == id);
 
-        if (!resposta.status) {
-            return res.status(404).json({ erro: 'Nenhum prato encontrado para deletar!' });
-        }
+    const resposta = await deletaPrato(id);
 
-        res.status(200).json({ mensagem: "Prato deletado com sucesso!" });
-
-    } catch (erro) {
-        console.error("Erro ao deletar prato:", erro);
-        res.status(500).json({ erro: "Erro interno ao deletar prato." });
+    if (!resposta.status) {
+      return res.status(404).json({ erro: 'Nenhum prato encontrado para deletar!' });
     }
+
+    // Se o prato existir e tiver imagem, deleta o arquivo correspondente.
+    if (prato && prato.imagem) {
+      const caminhoImagem = path.join('uploads-imagens', prato.imagem);
+      if (fs.existsSync(caminhoImagem)) {
+        fs.unlinkSync(caminhoImagem);
+      }
+    }
+
+    res.status(200).json({ mensagem: "Prato deletado com sucesso!" });
+
+  } catch (erro) {
+    console.error("Erro ao deletar prato:", erro);
+    res.status(500).json({ erro: "Erro interno ao deletar prato." });
+  }
 });
 
 // Exporta o roteador para ser utilizado em outras partes do projeto.
