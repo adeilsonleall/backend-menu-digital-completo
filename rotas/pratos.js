@@ -32,7 +32,8 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 /**
- * Rota para cadastrar um prato no banco de dados.
+ * Rota para cadastrar um prato no banco de dados - http://localhost:8080/pratos
+ * 
  */
 pratosRouters.post('/', upload.single('imagem'), async (req, res) => {
   try {
@@ -40,6 +41,20 @@ pratosRouters.post('/', upload.single('imagem'), async (req, res) => {
     const { categoria, nome, descricao = '', preco = 0 } = req.body;
     // Verifica se uma imagem foi enviada e obtém o nome do arquivo.
     const imagem = req.file ? req.file.filename : '';
+
+    // Validação
+    if(categoria === "" || nome === ""){
+      return res.status(400).json({ erro: 'Preencha todos os campos obrigatórios.'});
+    }
+
+    // upload.single('imagem')(req, res, async (erro) => {
+    //   if (erro) {
+    //     console.error("Erro no upload da imagem:", erro);
+    //     return res.status(500).json({ erro: "Erro ao salvar a imagem." });
+    //   }
+
+    //   res.status(201).json({ mensagem: "Prato cadastrado com sucesso!" });
+    // });
 
     // Chama a função de cadastro de prato no banco de dados.
     const resposta = await cadastraPrato(categoria, nome, descricao, preco, imagem);
