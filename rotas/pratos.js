@@ -28,9 +28,15 @@ const storage = multer.diskStorage({
     cb(null, nomeArquivo);
   }
 });
-
 const upload = multer({ storage });
 
+// Função para deletar imagem quando houver um erro no cadastramento ou atualização do prato.
+function deletaImagemRecebida(img) {
+  const caminhoImagem = path.join('uploads-imagens', img);
+  if (fs.existsSync(caminhoImagem)) {
+    fs.unlinkSync(caminhoImagem);
+  }
+}
 
 /**
  * 
@@ -44,14 +50,6 @@ pratosRouters.post('/', upload.single('imagem'), async (req, res) => {
 
     // Verifica se uma imagem foi enviada e obtém o nome do arquivo.
     const imagem = req.file ? req.file.filename : '';
-
-    // Função para deletar imagem quando houver um erro no cadastramento do prato
-    function deletaImagemRecebida(img) {
-      const caminhoImagem = path.join('uploads-imagens', img);
-      if (fs.existsSync(caminhoImagem)) {
-        fs.unlinkSync(caminhoImagem);
-      }
-    }
 
     // Validação
     if (categoria == "" || nome == "") {
@@ -110,7 +108,11 @@ pratosRouters.get('/', async (req, res) => {
   }
 });
 
-// Rota para fornecer imagens salvas no servidor.
+/**
+ * 
+ * Rota para fornecer imagens salvas no servidor..
+ * 
+ */
 pratosRouters.get('/:nomeImagem', (req, res) => {
   const { nomeImagem } = req.params; // Obtém o nome da imagem da requisição.
   const caminhoImagem = path.join('uploads-imagens', nomeImagem); // Define o caminho da imagem.
