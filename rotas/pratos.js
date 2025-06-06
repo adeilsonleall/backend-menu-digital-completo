@@ -5,12 +5,12 @@ import fs from 'fs'; // Importa módulo Fs (File System) para interagir com o si
 
 import {  // Importa funções de manipulação de pratos do serviço correspondente.
   retornaPratos,
-  retornaCategoriaPratos, 
-  retornaNomePratos, 
-  retornaDescricaoPratos, 
-  cadastraPrato, 
-  deletaPrato, 
-  editaPrato 
+  retornaCategoriaPratos,
+  retornaNomePratos,
+  retornaDescricaoPratos,
+  cadastraPrato,
+  deletaPrato,
+  editaPrato
 } from '../servicos/manipulaPratos.js';
 
 // Cria um roteador para as rotas relacionadas aos pratos.
@@ -31,7 +31,9 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+
 /**
+ * 
  * Rota para cadastrar um prato no banco de dados - http://localhost:8080/pratos
  * 
  */
@@ -39,39 +41,45 @@ pratosRouters.post('/', upload.single('imagem'), async (req, res) => {
   try {
     // Obtém os dados enviados no corpo da requisição.
     const { categoria, nome, descricao = '', preco = 0 } = req.body;
+
     // Verifica se uma imagem foi enviada e obtém o nome do arquivo.
     const imagem = req.file ? req.file.filename : '';
 
-    // Validação
-    if(categoria === "" || nome === ""){
-      return res.status(400).json({ erro: 'Preencha todos os campos obrigatórios.'});
+    // Função para deletar imagem quando houver um erro no cadastramento do prato
+    function deletaImagemRecebida(img) {
+      const caminhoImagem = path.join('uploads-imagens', img);
+      if (fs.existsSync(caminhoImagem)) {
+        fs.unlinkSync(caminhoImagem);
+      }
     }
 
-    // upload.single('imagem')(req, res, async (erro) => {
-    //   if (erro) {
-    //     console.error("Erro no upload da imagem:", erro);
-    //     return res.status(500).json({ erro: "Erro ao salvar a imagem." });
-    //   }
-
-    //   res.status(201).json({ mensagem: "Prato cadastrado com sucesso!" });
-    // });
+    // Validação
+    if (categoria == "" || nome == "") {
+      deletaImagemRecebida(imagem);
+      return res.status(400).json({ erro: 'Preencha todos os campos obrigatórios.' });
+    }
 
     // Chama a função de cadastro de prato no banco de dados.
     const resposta = await cadastraPrato(categoria, nome, descricao, preco, imagem);
 
     if (!resposta.status) {
+      deletaImagemRecebida(imagem);
       return res.status(400).json({ erro: 'Não foi possível cadastrar o prato.' });
+    } else {
+      res.status(201).json({ mensagem: "Prato cadastrado com sucesso!" });
     }
-    res.status(201).json({ mensagem: "Prato cadastrado com sucesso!" });
+
 
   } catch (erro) {
-    console.error("Erro ao cadastrar prato:", erro);
+    deletaImagemRecebida(imagem);
     res.status(500).json({ erro: "Erro interno ao cadastrar prato." });
   }
 });
 
 /**
+ * 
  * Rota para listar pratos, permitindo filtros opcionais.
+ * 
  */
 pratosRouters.get('/', async (req, res) => {
   try {
@@ -79,13 +87,16 @@ pratosRouters.get('/', async (req, res) => {
     const { categoria, nome, descricao } = req.query;
 
     // Define qual função de busca utilizar com base nos parâmetros informados.
-    const buscaPratos = categoria 
-      ? retornaCategoriaPratos(categoria) 
-      : nome 
-      ? retornaNomePratos(nome) 
-      : descricao
-      ? retornaDescricaoPratos(descricao)
-      : retornaPratos();
+    let buscaPratos;
+    if (categoria) {
+      buscaPratos = retornaCategoriaPratos(categoria);
+    } else if (nome) {
+      buscaPratos = retornaNomePratos(nome);
+    } else if (descricao) {
+      buscaPratos = retornaDescricaoPratos(descricao);
+    } else {
+      buscaPratos = retornaPratos();
+    }
 
     // Obtém a lista de pratos com base na busca.
     const listaPratos = await buscaPratos;
@@ -112,14 +123,16 @@ pratosRouters.get('/:nomeImagem', (req, res) => {
 });
 
 /**
+ * 
  * Rota para editar um prato existente.
  * A rota agora permite atualização também da imagem, caso um novo arquivo for enviado.
+ * 
  */
 pratosRouters.put('/:id', upload.single('imagem'), async (req, res) => {
   try {
     const { id } = req.params; // Obtém o ID do prato a ser editado.
     const { novaCategoria, novoNome, novaDescricao, novoPreco } = req.body;
-    
+
     // Se um novo arquivo de imagem for enviado, use-o; senão, utilize o valor enviado (se houver).
     let novaImagem = req.file ? req.file.filename : req.body.novaImagem;
 
@@ -150,8 +163,10 @@ pratosRouters.put('/:id', upload.single('imagem'), async (req, res) => {
 });
 
 /**
+ * 
  * Rota para deletar um prato do banco de dados.
  * Agora, além de excluir o registro, a imagem associada (se existir) também será removida do servidor.
+ * 
  */
 pratosRouters.delete('/:id', async (req, res) => {
   try {
