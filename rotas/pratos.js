@@ -3,6 +3,7 @@ import multer from 'multer'; // Importa módulo Multer para lidar com formulári
 import path from 'path'; // Importa módulo Path para trabalhar com caminhos de arquivos e diretórios.
 import fs from 'fs'; // Importa módulo Fs (File System) para interagir com o sistema de arquivos.
 
+
 import {  // Importa funções de manipulação de pratos do serviço correspondente.
   retornaPratos,
   retornaCategoriaPratos,
